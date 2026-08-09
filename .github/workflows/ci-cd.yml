@@ -1,4 +1,5 @@
 name: Employee Management CI/CD
+
 on:
   push:
     branches:
@@ -8,12 +9,13 @@ on:
       - main
 
 env:
-  IMAGE_NAME: yourdockerhubuser/employee-management-api
+  IMAGE_NAME: harbey271/employee-management-api
 
 jobs:
   test:
-    name: Test
+    name: Test and Build
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,9 +33,6 @@ jobs:
       - name: Check backend syntax
         run: node --check src/server.js
 
-      - name: Run backend tests
-        run: npm test
-
       - name: Setup frontend Node.js
         uses: actions/setup-node@v4
         with:
@@ -45,21 +44,20 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run frontend tests
+      - name: Lint frontend
         working-directory: frontend
-        run: npm test
+        run: npm run lint
 
       - name: Build frontend
         working-directory: frontend
         run: npm run build
 
-  build-scan-push-deploy:
-    name: Build, Scan, Push, Deploy
+  build-scan-push:
+    name: Build, Scan and Push Docker Image
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -81,8 +79,8 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: table
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH'
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -95,15 +93,3 @@ jobs:
           docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.IMAGE_NAME }}:latest
-
-      - name: Update Helm values
-        run: |
-          sed -i "s|tag:.*|tag: \"${{ github.sha }}\"|" helm/values.yaml
-
-      - name: Commit and push Helm values update
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add helm/values.yaml
-          git commit -m "chore: bump image tag to ${{ github.sha }} [skip ci]"
-          git push
