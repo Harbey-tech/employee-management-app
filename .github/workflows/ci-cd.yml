@@ -7,6 +7,8 @@ on:
   pull_request:
     branches:
       - main
+permissions:
+  contents: write
 
 env:
   IMAGE_NAME: harbey271/employee-management-api
