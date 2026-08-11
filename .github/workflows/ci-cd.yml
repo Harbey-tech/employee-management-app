@@ -23,7 +23,7 @@ jobs:
       - name: Setup backend Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -36,7 +36,7 @@ jobs:
       - name: Setup frontend Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -93,3 +93,24 @@ jobs:
           docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.IMAGE_NAME }}:latest
+
+      - name: Update Helm image tag
+        run: |
+          sed -i "s/^  tag: .*/  tag: \"${GITHUB_SHA}\"/" helm/employee-management/values.yaml
+
+          echo "Updated Helm values:"
+          grep -A4 '^image:' helm/employee-management/values.yaml
+
+      - name: Commit and push Helm update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add helm/employee-management/values.yaml
+
+          if git diff --cached --quiet; then
+            echo "No Helm changes to commit"
+          else
+            git commit -m "chore: update Helm image tag to ${GITHUB_SHA} [skip ci]"
+            git push
+          fi
