@@ -13,8 +13,7 @@ spec:
   ingressClassName: {{ .Values.ingress.className }}
 
   rules:
-    - host: employee-management.local
-      http:
+    - http:
         paths:
           - path: /api
             pathType: Prefix
