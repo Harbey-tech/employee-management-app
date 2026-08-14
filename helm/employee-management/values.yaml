@@ -78,3 +78,15 @@ volumeMounts: []
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+frontend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: harbey271/employee-management-frontend
+    pullPolicy: Always
+    tag: "latest"
+
+  service:
+    port: 80

@@ -7,11 +7,13 @@ on:
   pull_request:
     branches:
       - main
+
 permissions:
   contents: write
 
 env:
-  IMAGE_NAME: harbey271/employee-management-api
+  BACKEND_IMAGE: harbey271/employee-management-api
+  FRONTEND_IMAGE: harbey271/employee-management-frontend
 
 jobs:
   test:
@@ -55,7 +57,7 @@ jobs:
         run: npm run build
 
   build-scan-push:
-    name: Build, Scan and Push Docker Image
+    name: Build, Scan and Push Docker Images
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -67,19 +69,36 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build backend Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
-          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Scan image with Trivy
+      - name: Build frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          load: true
+          tags: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           format: table
           exit-code: "1"
           severity: "CRITICAL,HIGH"
@@ -90,18 +109,34 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Docker image
+      - name: Push backend image
         run: |
-          docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.IMAGE_NAME }}:latest
+          docker tag ${{ env.BACKEND_IMAGE }}:${{ github.sha }} ${{ env.BACKEND_IMAGE }}:latest
+          docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.BACKEND_IMAGE }}:latest
 
-      - name: Update Helm image tag
+      - name: Push frontend image
+        run: |
+          docker tag ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} ${{ env.FRONTEND_IMAGE }}:latest
+          docker push ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.FRONTEND_IMAGE }}:latest
+
+      - name: Update Helm image tags
         run: |
           sed -i "s/^  tag: .*/  tag: \"${GITHUB_SHA}\"/" helm/employee-management/values.yaml
 
-          echo "Updated Helm values:"
+          sed -i "/^frontend:/,/^$/ s/^    tag: .*/    tag: \"${GITHUB_SHA}\"/" helm/employee-management/values.yaml
+
+          echo "Backend image:"
           grep -A4 '^image:' helm/employee-management/values.yaml
+
+          echo "Frontend image:"
+          grep -A8 '^frontend:' helm/employee-management/values.yaml
+
+      - name: Validate Helm chart
+        run: |
+          helm lint helm/employee-management
+          helm template employee-management helm/employee-management > /tmp/rendered.yaml
 
       - name: Commit and push Helm update
         run: |
@@ -113,6 +148,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No Helm changes to commit"
           else
-            git commit -m "chore: update Helm image tag to ${GITHUB_SHA} [skip ci]"
+            git commit -m "chore: update application image tags to ${GITHUB_SHA} [skip ci]"
             git push
           fi

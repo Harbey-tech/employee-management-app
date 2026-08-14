@@ -19,7 +19,7 @@ function EmployeeTable() {
         }
 
         const response = await fetch(
-          "http://localhost:3000/api/employees",
+          "/api/employees",
           {
             headers: {
               Authorization: "Bearer " + token,

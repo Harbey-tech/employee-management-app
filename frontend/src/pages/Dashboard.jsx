@@ -30,7 +30,7 @@ function Dashboard() {
 
         // Fetch employee statistics
         const statsResponse = await fetch(
-          "http://localhost:3000/api/employees/stats",
+          "/api/employees/stats",
           {
             headers,
           }
@@ -48,7 +48,7 @@ function Dashboard() {
 
         // Fetch department statistics
         const departmentsResponse = await fetch(
-          "http://localhost:3000/api/employees/departments/stats",
+          "/api/employees/departments/stats",
           {
             headers,
           }
