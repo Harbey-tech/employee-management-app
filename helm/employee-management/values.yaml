@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: harbey271/employee-management-api
   pullPolicy: IfNotPresent
-  tag: "2fa401483bd8d614fa295b48e313ca721d194e26"
+  tag: "e1a7b0243bebbd1e07fb9fbf16aefcc70e6ba559"
 
 imagePullSecrets: []
 
