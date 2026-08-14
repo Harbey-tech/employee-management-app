@@ -30,8 +30,8 @@ service:
   port: 3000
 
 ingress:
-  enabled: false
-  className: ""
+  enabled: true
+  className: "nginx"
   annotations: {}
   hosts:
     - host: employee-management.local
