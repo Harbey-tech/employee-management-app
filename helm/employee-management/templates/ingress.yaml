@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "employee-management.fullname" . }}
+  name: {{ include "employee-management.fullname" . }}-api
   labels:
     {{- include "employee-management.labels" . | nindent 4 }}
   annotations:
@@ -13,7 +13,6 @@ metadata:
     {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
-
   rules:
     - http:
         paths:
@@ -24,7 +23,22 @@ spec:
                 name: {{ include "employee-management.fullname" . }}
                 port:
                   number: {{ .Values.service.port }}
-
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "employee-management.fullname" . }}-frontend
+  labels:
+    {{- include "employee-management.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - http:
+        paths:
           - path: /
             pathType: Prefix
             backend:
