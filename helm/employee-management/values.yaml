@@ -90,3 +90,6 @@ frontend:
 
   service:
     port: 80
+
+networkPolicy:
+  enabled: true
